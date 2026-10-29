@@ -2,30 +2,45 @@
 # 在 CrossOver 中运行 SA-MP「自由城」——配置说明
 
 记录日期：2026-10-27
-适用环境：Apple Silicon Mac + CrossOver 26.3
+最后更新：2026-10-29
 
-## 1. 最终效果
+## 1. 当前状态
 
-- SA-MP 0.3.7-R3 可以正常启动，不再报 `800x600x32` 显示模式错误。
-- 游戏以 **1280×832 窗口**运行（等于本机逻辑桌面分辨率），约 **50 FPS**。
-- 服务器浏览器、收藏服务器、中文聊天、中文对话框和记分板均正常。
-- 服务器内的中文公告牌 / TextDraw（左上规则、登录菜单等）不再显示方块，由 `directFont` 接管 GTA 字体渲染。
-- 正常流程：启动 `samp.exe` → 选中「★Drift Star★自由城1」→「连接」。
-- 原版 `samp.dll`、字体、存档、服务器地址和两个 CrossOver 启动项都保留。
+### 可用
+
+- SA-MP 0.3.7-R3 能正常启动，不再报 `800x600x32` 显示模式错误。
+- 游戏以 **1280×832 无边框窗口**运行（等于本机逻辑桌面分辨率）。
+- 服务器浏览器、收藏服务器、中文聊天、中文对话框和记分板正常。
+- 两个 CrossOver 启动入口、存档、服务器地址均保留。
+- `gta_sa.exe`、`samp.dll` 为原版文件，未打补丁；`scripts\` 只有窗口化插件。
+
+### 未解决
+
+- 服务器里的中文公告牌 / 部分 TextDraw（左上规则、登录菜单等）仍然显示方块。
+- 聊天区和 SA-MP 自己的 UI 正常；方块只出现在使用 GTA 位图字体的 TextDraw 上。
+- 已停止继续尝试。`directFont`、自定义 CJK 字体、改代码页、改 `samp.dll` 字体名等方案均无效，且已全部回滚。
+
+### 崩溃补丁状态
+
+- 排查期间出现过 `0x007324B6` 崩溃（`CVisibilityPlugins::RenderAtomicWithAlpha`）。
+- 当时用 SilentPatchSA + StreamMemFix + `gta_sa.exe` 5 字节补丁验证过不崩；按“恢复到实验前状态”的要求，**这些补丁已全部移除**。
+- 当前 `gta_sa.exe` 是原版（SHA-256 `a559aa77...`），没有安装任何崩溃补丁。
+- 如果 `0x007324B6` 再次出现，处理步骤和 5 字节补丁记录在附录 D。
 
 ## 2. 环境与路径
 
-| 项目           | 值                                           |
-| -------------- | -------------------------------------------- |
-| macOS          | 15.7                                         |
-| 机器           | MacBook Air（Apple M4，16 GB）               |
-| CrossOver      | 26.3                                         |
-| 容器（bottle） | `samp`，Windows 10（build 19045）            |
-| 游戏来源       | 自由城官网 `http://www.zycdjz1.com/`         |
-| 游戏           | GTA: San Andreas 1.0 + SA-MP 0.3.7-R3 整合包 |
-| 服务器         | `★Drift Star★自由城1`，`ds.zycdjz1.com:7777` |
-| 显示           | 2560×1664 Retina；逻辑分辨率 1280×832        |
-| 游戏窗口       | 1280×832，约 50 FPS（`fpslimit=48`）         |
+| 项目           | 值                                                         |
+| -------------- | ---------------------------------------------------------- |
+| macOS          | 15.7                                                       |
+| 机器           | MacBook Air（Apple M4，16 GB）                             |
+| CrossOver      | 26.3                                                       |
+| 容器（bottle） | `samp`，Windows 10（build 19045）                          |
+| 游戏来源       | 自由城官网 `http://www.zycdjz1.com/`                       |
+| 游戏           | GTA: San Andreas 1.0 + SA-MP 0.3.7-R3 整合包               |
+| 服务器         | `★Drift Star★自由城1`，`ds.zycdjz1.com:7777`               |
+| 实际连接       | 2026-10-29 为 `154.12.58.112:7777`（以当时 DNS 解析为准）  |
+| 显示           | 2560×1664 Retina；逻辑分辨率 1280×832                      |
+| 游戏窗口       | 无边框 1280×832；`fpslimit=90`，实际帧率随场景变化         |
 
 游戏目录（macOS）：
 
@@ -46,6 +61,8 @@ C:\GTA  ->  C:\Program Files (x86)\侠盗车手：圣安地列斯
 工作目录：C:\GTA
 ```
 
+快捷方式本身没有带服务器参数；进入游戏后，在服务器浏览器里选择「★Drift Star★自由城1」再连接。
+
 ### 2.1 游戏与联机工具来源
 
 游戏本体和 SA-MP 联机端都来自**自由城官网**：
@@ -58,7 +75,7 @@ C:\GTA  ->  C:\Program Files (x86)\侠盗车手：圣安地列斯
 
 本机为 **MacBook Air（Apple M4，16 GB）**，上述 Windows 程序全部运行在 CrossOver 的 `samp` 容器中。
 
-## 3. 问题与修复
+## 3. 已生效的配置
 
 ### 3.1 启动报 `800x600x32`：自建 d3d9 代理
 
@@ -89,7 +106,7 @@ C:\GTA  ->  C:\Program Files (x86)\侠盗车手：圣安地列斯
 
 > 关键点：只放 `d3d9.dll` 而不加 `native,builtin` 覆盖时，Wine 仍会使用内建 d3d9，代理被绕过，错误依旧。
 
-### 3.2 窗口化：III.VC.SA.WindowedMode.asi
+### 3.2 窗口化 / 无边框：III.VC.SA.WindowedMode.asi
 
 整合包自带 ASI Loader（`vorbisFile.dll`），会加载 `scripts\*.asi`。窗口化插件放在：
 
@@ -102,27 +119,31 @@ scripts/III.VC.SA.WindowedMode.cfg
 
 ```ini
 [MAIN]
-WindowMode = 1      ; 1 = 窗口模式
+WindowMode = 2      ; 2 = Borderless（无边框）
 ConfineCursor = 1
 PauseOnFocusLoss = 1
 ResumeOnFocus = 1
 
 [WINDOW]
-Width = 0           ; 0 = 使用桌面逻辑分辨率
-Height = 0
+Width = 640
+Height = 480
+PositionX = 640
+PositionY = 416
 ```
 
-因此窗口是 1280×832。插件文档说明 `Alt+Enter` / `Ctrl+Enter` 可在窗口和无边框之间切换（本次未专门测试）。
+说明：
 
-如果不需要窗口化，删掉这两个文件即可恢复游戏自己的全屏模式。
+- `WindowMode=2` 是 **Borderless**：窗口覆盖整个显示器，按桌面逻辑分辨率 1280×832 显示。
+- `Width` / `Height` / `PositionX` / `PositionY` 只在 **Windowed** 模式下参与窗口大小和位置；当前保存的 640×480 和居中点不会改变 Borderless 的实际显示。
+- `Alt+Enter` / `Ctrl+Enter` 可在 Windowed 和 Borderless 之间切换；切换到 / 离开 Fullscreen 需要重启游戏。
+- 如果想要真正的窗口模式：把 `WindowMode` 改成 `1`，`Width` / `Height` 设为 `0`（桌面分辨率）或明确写 `1280` / `832`。
+- 如果不需要窗口化，删掉这两个文件即可恢复游戏自己的全屏模式。
 
 ### 3.3 中文聊天：修改 sa-mp.cfg 字体
 
 **现象**：聊天区中文显示为方块或问号。
 
 **原因**：SA-MP 聊天区默认使用 `Arial`，Wine 自带的 Arial 没有中文字形；而 `sampaux3.ttf` 不是聊天字体，它是击杀列表的图标字体（只有 21 个字形），不要用它替换成中文字体。
-
-> 这一节只解决**聊天区**。服务器公告牌、规则、对话框等 TextDraw 走 GTA 的 `CFont`，需要 3.4 的 `directFont`；只改 `sa-mp.cfg` 对它们不生效。
 
 CrossOver 会自动把 macOS 的系统字体注册进容器。本机已有的 `Arial Unicode MS` 来自：
 
@@ -132,72 +153,22 @@ CrossOver 会自动把 macOS 的系统字体注册进容器。本机已有的 `A
 
 容器注册表 `system.reg` 中可看到它被映射为 `Arial Unicode MS (TrueType)`，因此不需要往 `C:\windows\Fonts` 安装任何字体。
 
-修改：
-
-```
-~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg
-```
-
-加入（或确认）以下三行：
+当前 `~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg` 内容：
 
 ```ini
+fpslimit=90
+multicore=1
+audioproxyoff=0
 fontface="Arial Unicode MS"
 fontweight=1
 fontsize=1
 ```
 
-修改后重新进入服务器即可看到中文。SA-MP 退出时会重写该文件，但已验证这三行会保留。
+`fontface` / `fontweight` / `fontsize` 三行负责聊天区中文。修改后重新进入服务器即可看到中文。SA-MP 退出时会重写该文件，但已验证这三行会保留。
 
-### 3.4 中文公告牌 / TextDraw：directFont
+> 这一节只解决**聊天区**。服务器公告牌、规则、登录菜单等 TextDraw 走 GTA 的 `CFont`，改 `sa-mp.cfg` 对它们不生效；这部分仍然显示方块，见第 4 节。
 
-**现象**：聊天中文已经正常，但服务器左上角的规则公告牌、登录 / 菜单对话框仍然是一排方块（`□□□□`）。
-
-**原因**：这些文字是 SA-MP 的 **TextDraw**，最终调用 GTA 的 `CFont::PrintString`，字形来自 `models/fonts.txd` 里的位图字体。该字体只有拉丁字符，没有汉字，所以 `sa-mp.cfg` 的 `fontface` 管不到它。
-
-**方案**：使用 DK22Pac 的 [directFont](https://github.com/DK22Pac/directFont) v2.2。这是一个 32 位 ASI 插件，挂钩 `CFont::PrintString` / `CFont::GetStringWidth` / `CFont::SetFontStyle`，改用 D3DX 系统字体渲染，因此 TextDraw 也能显示中文。整合包自带的 ASI Loader（`vorbisFile.dll`）会自动加载 `scripts\*.asi`。
-
-**安装**：把两个文件放进 `scripts\`：
-
-```
-scripts/directFont.asi
-scripts/directFont.ini
-```
-
-`directFont.ini` 的关键设置（四个字体槽 `FONT1`–`FONT4` 完全一致）：
-
-```ini
-[GENERAL]
-UseTranslator=NONE
-
-[FONT1]
-FontName=Arial Unicode MS
-Height=64
-Width=64
-ScaleFactor.x=0.5
-ScaleFactor.y=0.5
-Weight=400
-Italic=0
-CharSet=134
-OutputPrecision=0
-Quality=0
-PitchAndFamily=0
-UpcaseAlways=0
-ReplaceUnderscoreWithSpace=0
-```
-
-`FONT2`–`FONT4` 复制同样的内容，完整文件见附录 D。说明：
-
-- `Arial Unicode MS` 已由 CrossOver 从 macOS 注册进容器（见 3.3），不需要额外装字体。
-- `CharSet=134` 是 `GB2312_CHARSET`（代码页 936），与容器的 `zh-CN` 设置一致。
-- `Height` / `Width` 为 64、`ScaleFactor` 为 0.5，是实测与 1280×832 窗口匹配的组合；字太大或太小就调 `ScaleFactor`（例如 0.45 / 0.55），四个槽一起改。
-- `UseTranslator=NONE`：不启用内置的拉丁字母替换，避免把正常英文转成其他字符。
-- `directFont.asi` 依赖 `d3dx9_43.dll`；CrossOver 容器里已有（`system32` 和 `syswow64`），无需另装 DirectX。
-
-**验证**：进入「★Drift Star★自由城1」后，左上角规则和「欢迎：登录 / 找回密码 / …」对话框均显示中文；本次已实测通过。
-
-> 风险与兼容性：directFont 是为 GTA SA 1.0 US 编写的旧插件，会接管**所有** GTA 字体渲染（包括英文），因此英文观感会和原版不同；极少数情况下可能与其他 ASI 冲突。若出现崩溃或文字错位，直接删除这两个文件即可恢复，详见第 6 节。
-
-### 3.5 中文路径与启动项
+### 3.4 中文路径与启动项
 
 原游戏目录名含中文，因此：
 
@@ -205,38 +176,61 @@ ReplaceUnderscoreWithSpace=0
 - 两个启动项的 `.lnk` 目标改为 `C:\GTA\samp.exe`，工作目录设为 `C:\GTA`；
 - CrossOver 里的两个入口都保留，名称未改。
 
-## 4. 日常启动步骤
+## 4. 未解决：中文公告牌 / TextDraw 方块
+
+**现象**：聊天区中文已经正常，但服务器左上角的规则公告牌、登录 / 菜单对话框仍然是一排方块（`□□□□`）。
+
+**原因**：这些文字是 SA-MP 的 **TextDraw**，最终走 GTA 的 `CFont` / `models/fonts.txd` 位图字体。该字体只有拉丁字符，没有汉字，所以 `sa-mp.cfg` 的 `fontface` 管不到它。
+
+### 4.1 已尝试且无效的方案
+
+| 尝试 | 具体做法 | 结果 | 现状 |
+| ---- | -------- | ---- | ---- |
+| directFont v2.2 | `scripts/directFont.asi` + `directFont.ini`，四个字体槽均为 `Arial Unicode MS`，`CharSet=134`（GB2312） | 公告牌仍方块 | 已删除 |
+| 代码页 936 + 自定义字体 | 容器 `ACP` / `OEMCP` 改为 936，把 23 MB 的 `ArialBoldCJK.ttf` 放进 `C:\windows\Fonts` 并注册为 `Arial Bold CJK` | 无效 | 字体和注册项已删除；`ACP=1252`、`OEMCP=437`、`MACCP=10000`、语言 `0409` 已恢复 |
+| Wine 字体替换 | `HKCU\Software\Wine\Fonts\Replacements\Arial = Arial Unicode MS` | 无效 | 已恢复 `Arial = Bitstream Vera Sans` |
+| 改 `samp.dll` 的字体名 | 文件偏移 `0xEA400`、`0x117494` 两处明文 `Arial` 改成 GBK `宋体` | 无效 | 已恢复原版 `samp.dll` |
+| 反汇编定位字体创建 | `D3DXCreateFontA` 调用点 `0x1006B318`：face 字符串 `0x100EA400`（`Arial`），`Height=38`、`Width=10`、`Weight=700`、`CharSet=1` | 改字体名未生效 | 未再修改 |
+
+### 4.2 结论
+
+- 聊天区走 SA-MP 自己的 D3DX 字体（`sa-mp.cfg`），所以聊天正常。
+- 公告牌 / TextDraw 走 GTA 的位图字体；`directFont` 理论上应接管 `CFont`，但对这个服务器的公告牌没有效果。可能是服务器用了 TextDraw 贴图 / 自定义渲染，或 Wine 下的 D3DX 字体路径没有按预期生效。
+- 没有继续验证。现有的聊天、对话框、记分板都正常，公告牌方块只是显示问题，不影响游戏。
+- 不要再把 `sampaux3.ttf` 换成中文字体；它是图标字体。
+- 如果以后要再试，先确认公告牌到底是 `TextDraw` 还是 `3DTextLabel`，再分别定位；不要在 `gta_sa.exe` / `samp.dll` 上反复打补丁。
+
+## 5. 日常启动步骤
 
 1. 打开 CrossOver，或从启动台打开：
    - 「圣安地列斯 联机工具 SA-MP 0.3.7-R3语音插件版」
    - 或「圣安地列斯游戏本体+SAMP-R3带语音插件汉化版」
 2. 在 SA-MP 服务器浏览器中找到「★Drift Star★自由城1」。
 3. 选中服务器，点「连接」。
-4. 进入服务器后中文聊天、公告牌和对话框均正常。
+4. 进入服务器后聊天、对话框、记分板正常；公告牌 / 部分 TextDraw 仍会是方块，这是当前已知状态。
 
 服务器地址：`ds.zycdjz1.com:7777`
 收藏记录保存在 `SAMP/USERDATA.DAT`，未改动。
 
-## 5. 文件与配置清单
+## 6. 文件与配置清单
 
-### 新增或修改的文件
+### 生效 / 新增的文件
 
-| 路径                                                    | 作用                              | 校验值                                                       |
+| 路径                                                    | 作用                              | 校验值 / 当前值                                              |
 | ------------------------------------------------------- | --------------------------------- | ------------------------------------------------------------ |
 | 游戏根目录 `d3d9.dll`                                   | 800×600×32 模式代理，271,360 字节 | SHA-256 `fde5c00e2246f939ae542b5535cd39642dfaeda020a169bf11494b560fb134c2` |
 | `scripts/III.VC.SA.WindowedMode.asi`                    | 窗口化插件，3,232,600 字节        | SHA-256 `8b2485e89761044f56bbd4e2fa882ec9667939edf542fde682e016bd7e9373a9` |
-| `scripts/III.VC.SA.WindowedMode.cfg`                    | 窗口化设置                        | `WindowMode=1`、`Width=0`、`Height=0`                        |
-| `scripts/directFont.asi`                                | TextDraw / CFont 中文字体钩子（directFont v2.2），370,176 字节 | SHA-256 `168af6eda740f1c68437f9c61cf00c89279ea8ce19fff96a0c6888ce9e0bc2f3` |
-| `scripts/directFont.ini`                                | directFont 配置，四个字体槽均为 Arial Unicode MS | SHA-256 `b49a24ccc89b032954b42f99501b4bd9e959f5695c23cbaa424264e572032789` |
-| `~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg` | 中文字体设置                      | 见 3.3                                                       |
+| `scripts/III.VC.SA.WindowedMode.cfg`                    | 窗口化设置                        | `WindowMode=2`（Borderless）、`Width=640`、`Height=480`、`PositionX=640`、`PositionY=416` |
+| `~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg` | 聊天字体 / 帧率设置               | 见 3.3                                                       |
 | `~/Library/.../Bottles/samp/user.reg`                   | `d3d9=native,builtin` 覆盖        | 见 3.1                                                       |
 | `C:\GTA`                                                | 指向中文游戏目录的链接            | —                                                            |
-| 两个 CrossOver `.app` / `.lnk`                          | 启动入口，目标 `C:\GTA\samp.exe`  | —                                                            |
+| 两个 CrossOver `.app` / `.lnk`                          | 启动入口，目标 `C:\GTA\samp.exe`  | 工作目录 `C:\GTA`，无额外参数                                |
 
 ### 未改动的原文件
 
 | 文件                                      | SHA-256                                                      |
 | ----------------------------------------- | ------------------------------------------------------------ |
+| `gta_sa.exe`                              | `a559aa772fd136379155efa71f00c47aad34bbfeae6196b0fe1047d0645cbd26` |
 | `samp.dll`                                | `9c9b2cc31a4ced6967420b1880c096b5c4e7630e227aa379be4019c21b6fddc1` |
 | `samp.exe`                                | `b5e760036bc2cd8c3b6ce6c3fd0d2a3f5ea896a33ffcbc3914d6895d1e46dfa5` |
 | `sampaux3.ttf`                            | `3adfe84498e8951e61ece57ad08de21b95d162697517291564ae6ef3a8790c1b` |
@@ -244,23 +238,36 @@ ReplaceUnderscoreWithSpace=0
 | `vorbisFile.dll`（整合包自带 ASI Loader） | `c33e1bafafd441b42eaa6d322393b9dd700f8a9c13fb2e7780daf49707a46353` |
 | `models/fonts.txd`（GTA 原版位图字体）   | `5ca77cddb15f96de29b3786cb5620492dbc310d29af2d1374e644d74f1a61cbf` |
 
-`samp.dll` 没有改名、没有打补丁；代理逻辑全部在独立的 `d3d9.dll` 里。`fonts.txd` 也没有替换——directFont 只是绕过了它，原文件保持不变。
+`gta_sa.exe` 和 `samp.dll` 没有改名、没有打补丁；`fonts.txd` 也没有替换。游戏目录 `scripts\` 现在只有：
 
-> 最终版 `d3d9.dll` 已去掉调试日志输出，游戏目录不会再生成 `d3d9proxy.log`。
+```
+III.VC.SA.WindowedMode.asi
+III.VC.SA.WindowedMode.cfg
+```
 
-## 6. 回滚
+### 已移除的排查文件
+
+- `scripts/directFont.asi`、`scripts/directFont.ini`
+- `scripts/SilentPatchSA.asi`、`scripts/SilentPatchSA.ini`、`scripts/StreamMemFix.asi`
+- `C:\windows\Fonts\ArialBoldCJK.ttf` 及其注册项
+- 游戏目录里的 `samp.dll.bak-*`、`gta_sa.exe.bak-*`
+- `sa-mp.cfg.bak-*`、`system.reg.bak-*`、`user.reg.bak-*`
+- 旧的 12 MB 备份包和本次的本地崩溃修复包
+
+> 容器里 `chcp` 仍显示 936，`HKCU\Software\Wine\Fonts\Codepages` 仍是 `936,936`。这是 CrossOver 跟随 macOS `AppleLocale=zh_CN` 的既有行为；注册表 `ACP` / `OEMCP` 已恢复为 1252 / 437，不要为了公告牌再去改代码页。
+
+## 7. 回滚
 
 先退出游戏和 CrossOver，再按需操作：
 
 1. **撤销 800×600 修复**：删除游戏根目录的 `d3d9.dll`，并在 winecfg 的「函数库」中删除 `d3d9` 覆盖（或把 `user.reg` 里的 `"d3d9"="native,builtin"` 删除）。
 2. **撤销窗口化**：删除 `scripts/III.VC.SA.WindowedMode.asi` 和 `.cfg`。
 3. **撤销聊天字体**：删除 `sa-mp.cfg` 中的 `fontface` / `fontweight` / `fontsize` 三行，或改回 `fontface="Arial"`。
-4. **撤销 TextDraw 中文**：删除 `scripts/directFont.asi` 和 `scripts/directFont.ini`。
-5. **撤销快捷方式**：把两个启动项的目标改回中文游戏目录下的 `samp.exe`（或直接删除 `C:\GTA` 链接后重新指定）。
+4. **撤销快捷方式**：把两个启动项的目标改回中文游戏目录下的 `samp.exe`（或直接删除 `C:\GTA` 链接后重新指定）。
 
 游戏本体、存档、服务器收藏均不受上述操作影响。
 
-## 7. 常见问题
+## 8. 常见问题
 
 **启动又报 `800x600x32`**
 
@@ -272,28 +279,40 @@ ReplaceUnderscoreWithSpace=0
 
 - 先分清位置：
   - **聊天区**：检查 `sa-mp.cfg` 的三行字体设置是否被客户端重写；确认 `system.reg` 中 `Arial Unicode MS` 仍指向 macOS 的 `Arial Unicode.ttf`。
-  - **公告牌 / TextDraw / 对话框**：检查 `scripts/directFont.asi`、`directFont.ini` 是否存在，`CharSet` 是否为 `134`，以及容器里是否有 `d3dx9_43.dll`。
+  - **公告牌 / TextDraw / 对话框**：这是当前未解决的问题。不要再装 `directFont` 期待修复；此前的 directFont、代码页、字体替换和 `samp.dll` 补丁都已验证无效并回滚。
 - 不要把 `sampaux3.ttf` 换成中文字体，它不是聊天字体。
 
-**directFont 导致崩溃、文字错位或英文观感异常**
+**聊天字体被重置**
 
-- 先退出游戏，删除 `scripts/directFont.asi` 和 `directFont.ini`，再启动即可回到原版字体。
-- 文字大小不合适时只改 `directFont.ini` 的 `ScaleFactor`（四个字体槽一起改），不要动其它 hook 设置。
+- 退出游戏后检查 `~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg`，确认这三行仍在：
+  `fontface="Arial Unicode MS"`、`fontweight=1`、`fontsize=1`。
+- 如果被改回 `Arial`，改回上面的值再进服务器。
 
 **画面全屏、无法切窗口**
 
-- 检查 `scripts/III.VC.SA.WindowedMode.cfg` 的 `WindowMode` 是否为 `1`。
-- 删除该 cfg 后重启游戏，会重新生成默认设置。
-- 可尝试 `Alt+Enter` / `Ctrl+Enter`。
+- 当前配置是 `WindowMode=2`（Borderless）。按 `Alt+Enter` / `Ctrl+Enter` 可在 Windowed 和 Borderless 之间切换；切换到 / 离开 Fullscreen 需要重启游戏。
+- 如果 cfg 被改坏，删除它后重启游戏会重新生成默认设置。
 
 **窗口太大或太小**
 
-- `Width` / `Height` 设为 `0` 表示使用桌面逻辑分辨率；也可以写死，例如 `1280` / `832`。
+- 在 Borderless 模式下由桌面分辨率决定，`Width` / `Height` 不生效。
+- 想要指定窗口大小：把 `WindowMode` 改成 `1`，再设 `Width` / `Height`；`0` 表示使用桌面逻辑分辨率。
 
 **启动项打不开**
 
 - 确认 `C:\GTA` 链接仍存在，且指向中文游戏目录。
 - 启动项目标应为 `C:\GTA\samp.exe`，工作目录 `C:\GTA`。
+
+**出现 `0x007324B6` 崩溃**
+
+- 当前没有安装任何崩溃补丁，`gta_sa.exe` 是原版。
+- 崩溃特征：`CVisibilityPlugins::RenderAtomicWithAlpha`，`EAX=0xC1000000`，`ESI=7`。
+- 如果再次出现，先保留崩溃日志，再按附录 D 的 5 字节补丁处理；不要直接改 `samp.dll` 或字体。
+
+**为什么游戏目录里没有 SilentPatch / StreamMemFix / directFont**
+
+- 这些是排查期间临时加的，已按“恢复到实验前状态”的要求全部移除。
+- 当前只保留窗口化插件；游戏本体和 `samp.dll` 都是原版。
 
 ## 附录 A：d3d9 代理原理
 
@@ -430,71 +449,69 @@ Direct3DCreate9Ex
 
 把生成的 `d3d9.dll` 放到游戏根目录，并确保 `d3d9=native,builtin` 覆盖存在即可。`-g` 只是保留调试信息，不影响运行；如不需要可去掉。
 
-## 附录 D：`directFont.ini`（完整）
+## 附录 D：`0x007324B6` 崩溃与 5 字节补丁（当前未安装）
 
-```ini
-; DirectFont by DK22Pac - 自由城 SA-MP 中文字体配置
-; 用 macOS 自带 Arial Unicode MS 渲染 GTA 的 CFont（聊天区不受影响）
-[GENERAL]
-UseTranslator=NONE
+### D.1 崩溃特征
 
-[FONT1]
-FontName=Arial Unicode MS
-Height=64
-Width=64
-ScaleFactor.x=0.5
-ScaleFactor.y=0.5
-Weight=400
-Italic=0
-CharSet=134
-OutputPrecision=0
-Quality=0
-PitchAndFamily=0
-UpcaseAlways=0
-ReplaceUnderscoreWithSpace=0
+- 地址：`0x007324B6`
+- 函数：`CVisibilityPlugins::RenderAtomicWithAlpha`
+- 寄存器：`EAX=0xC1000000`，`ESI=7`
+- 触发场景：排查字体 / 渲染补丁期间出现过；用户表示在开始排查前没有崩溃。
 
-[FONT2]
-FontName=Arial Unicode MS
-Height=64
-Width=64
-ScaleFactor.x=0.5
-ScaleFactor.y=0.5
-Weight=400
-Italic=0
-CharSet=134
-OutputPrecision=0
-Quality=0
-PitchAndFamily=0
-UpcaseAlways=0
-ReplaceUnderscoreWithSpace=0
+### D.2 5 字节补丁
 
-[FONT3]
-FontName=Arial Unicode MS
-Height=64
-Width=64
-ScaleFactor.x=0.5
-ScaleFactor.y=0.5
-Weight=400
-Italic=0
-CharSet=134
-OutputPrecision=0
-Quality=0
-PitchAndFamily=0
-UpcaseAlways=0
-ReplaceUnderscoreWithSpace=0
+只适用于 GTA San Andreas 1.0 的 `gta_sa.exe`：
 
-[FONT4]
-FontName=Arial Unicode MS
-Height=64
-Width=64
-ScaleFactor.x=0.5
-ScaleFactor.y=0.5
-Weight=400
-Italic=0
-CharSet=134
-OutputPrecision=0
-Quality=0
-PitchAndFamily=0
-UpcaseAlways=0
-ReplaceUnderscoreWithSpace=0
+| 项目         | 值                                                           |
+| ------------ | ------------------------------------------------------------ |
+| 文件偏移     | `0x3318B0`                                                   |
+| 原始字节     | `8B 4F 20 8B 04`                                             |
+| 补丁字节     | `E9 1D 00 00 00`（`jmp 0x7324D2`）                           |
+| 原始 SHA-256 | `a559aa772fd136379155efa71f00c47aad34bbfeae6196b0fe1047d0645cbd26` |
+| 补丁后 SHA-256 | `a29d77a07effc5a2afc1dd991b9e5c95d84f5c9edd7cda235e47a1c549ce84cb` |
+
+补丁跳过 `RenderAtomicWithAlpha` 里按材质遍历 alpha 的循环。它只规避这个特定崩溃，不修字体，也不保证所有场景都不崩。
+
+当时还配合使用过：
+
+| 文件                | SHA-256                                                      |
+| ------------------- | ------------------------------------------------------------ |
+| `SilentPatchSA.asi` | `908e1d12e36ba809a8ce584be0bd29239349968259a5de593f9b0cc71dbb352b` |
+| `StreamMemFix.asi`  | `f91694b032b19c449323c04e8832d607016861ded19e40a1d69bf07ab72e74b4` |
+
+这三样在验证后已全部移除，游戏目录里没有它们。本地崩溃修复包也已删除；下面是可复现的补丁脚本。
+
+### D.3 重新打补丁（仅在崩溃复发时）
+
+先备份 `gta_sa.exe`，然后在游戏目录运行：
+
+```python
+#!/usr/bin/env python3
+"""GTA SA 1.0: 5-byte workaround for the 0x007324B6 alpha-material crash."""
+import hashlib
+import pathlib
+import sys
+
+OFFSET = 0x3318B0
+ORIGINAL = bytes.fromhex("8B 4F 20 8B 04")
+PATCH = bytes.fromhex("E9 1D 00 00 00")
+
+path = pathlib.Path(sys.argv[1] if len(sys.argv) > 1 else "gta_sa.exe")
+data = bytearray(path.read_bytes())
+current = bytes(data[OFFSET:OFFSET + len(PATCH)])
+
+if current == PATCH:
+    print("already patched:", path)
+elif current == ORIGINAL:
+    data[OFFSET:OFFSET + len(PATCH)] = PATCH
+    path.write_bytes(data)
+    print("patched:", path)
+else:
+    sys.exit(f"unexpected bytes at {OFFSET:#x}: {current.hex()}")
+
+print("sha256:", hashlib.sha256(data).hexdigest())
 ```
+
+打完后的 SHA-256 应为 `a29d77a07effc5a2afc1dd991b9e5c95d84f5c9edd7cda235e47a1c549ce84cb`。
+
+还原：把备份的原始 `gta_sa.exe` 换回来，或确认 SHA-256 回到 `a559aa77...`。如果同时装了 SilentPatch / StreamMemFix，也要从 `scripts\` 删除。
