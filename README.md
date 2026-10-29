@@ -20,6 +20,7 @@
 | 机器           | MacBook Air（Apple M4，16 GB）               |
 | CrossOver      | 26.3                                         |
 | 容器（bottle） | `samp`，Windows 10（build 19045）            |
+| 游戏来源       | 自由城官网 `http://www.zycdjz1.com/`         |
 | 游戏           | GTA: San Andreas 1.0 + SA-MP 0.3.7-R3 整合包 |
 | 服务器         | `★Drift Star★自由城1`，`ds.zycdjz1.com:7777` |
 | 显示           | 2560×1664 Retina；逻辑分辨率 1280×832        |
@@ -43,6 +44,18 @@ C:\GTA  ->  C:\Program Files (x86)\侠盗车手：圣安地列斯
 目标：C:\GTA\samp.exe
 工作目录：C:\GTA
 ```
+
+### 2.1 游戏与联机工具来源
+
+游戏本体和 SA-MP 联机端都来自**自由城官网**：
+
+- 官网首页：`http://www.zycdjz1.com/`
+- 游戏本体：首页「电脑联机 → ① 下载游戏 → 1 游戏本体 600MB」（`zsadlsd.exe`）
+- 联机端：同页「2 联机端」（`samp-install.exe`）
+
+按官网说明先安装游戏本体，再把联机端安装到游戏根目录。服务器地址也以官网为准：`ds.zycdjz1.com:7777`。
+
+本机为 **MacBook Air（Apple M4，16 GB）**，上述 Windows 程序全部运行在 CrossOver 的 `samp` 容器中。
 
 ## 3. 三个问题与修复
 
