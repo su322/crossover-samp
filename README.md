@@ -9,6 +9,7 @@
 - SA-MP 0.3.7-R3 可以正常启动，不再报 `800x600x32` 显示模式错误。
 - 游戏以 **1280×832 窗口**运行（等于本机逻辑桌面分辨率），约 **50 FPS**。
 - 服务器浏览器、收藏服务器、中文聊天、中文对话框和记分板均正常。
+- 服务器内的中文公告牌 / TextDraw（左上规则、登录菜单等）不再显示方块，由 `directFont` 接管 GTA 字体渲染。
 - 正常流程：启动 `samp.exe` → 选中「★Drift Star★自由城1」→「连接」。
 - 原版 `samp.dll`、字体、存档、服务器地址和两个 CrossOver 启动项都保留。
 
@@ -57,7 +58,7 @@ C:\GTA  ->  C:\Program Files (x86)\侠盗车手：圣安地列斯
 
 本机为 **MacBook Air（Apple M4，16 GB）**，上述 Windows 程序全部运行在 CrossOver 的 `samp` 容器中。
 
-## 3. 三个问题与修复
+## 3. 问题与修复
 
 ### 3.1 启动报 `800x600x32`：自建 d3d9 代理
 
@@ -115,9 +116,13 @@ Height = 0
 
 如果不需要窗口化，删掉这两个文件即可恢复游戏自己的全屏模式。
 
-### 3.3 中文聊天与 UI：只改 sa-mp.cfg 字体
+### 3.3 中文聊天：修改 sa-mp.cfg 字体
 
-**原因**：聊天、对话框、记分板使用 `Arial`，Wine 自带的 Arial 没有中文字形；而 `sampaux3.ttf` 不是聊天字体，它是击杀列表的图标字体（只有 21 个字形），不要用它替换成中文字体。
+**现象**：聊天区中文显示为方块或问号。
+
+**原因**：SA-MP 聊天区默认使用 `Arial`，Wine 自带的 Arial 没有中文字形；而 `sampaux3.ttf` 不是聊天字体，它是击杀列表的图标字体（只有 21 个字形），不要用它替换成中文字体。
+
+> 这一节只解决**聊天区**。服务器公告牌、规则、对话框等 TextDraw 走 GTA 的 `CFont`，需要 3.4 的 `directFont`；只改 `sa-mp.cfg` 对它们不生效。
 
 CrossOver 会自动把 macOS 的系统字体注册进容器。本机已有的 `Arial Unicode MS` 来自：
 
@@ -143,7 +148,56 @@ fontsize=1
 
 修改后重新进入服务器即可看到中文。SA-MP 退出时会重写该文件，但已验证这三行会保留。
 
-### 3.4 中文路径与启动项
+### 3.4 中文公告牌 / TextDraw：directFont
+
+**现象**：聊天中文已经正常，但服务器左上角的规则公告牌、登录 / 菜单对话框仍然是一排方块（`□□□□`）。
+
+**原因**：这些文字是 SA-MP 的 **TextDraw**，最终调用 GTA 的 `CFont::PrintString`，字形来自 `models/fonts.txd` 里的位图字体。该字体只有拉丁字符，没有汉字，所以 `sa-mp.cfg` 的 `fontface` 管不到它。
+
+**方案**：使用 DK22Pac 的 [directFont](https://github.com/DK22Pac/directFont) v2.2。这是一个 32 位 ASI 插件，挂钩 `CFont::PrintString` / `CFont::GetStringWidth` / `CFont::SetFontStyle`，改用 D3DX 系统字体渲染，因此 TextDraw 也能显示中文。整合包自带的 ASI Loader（`vorbisFile.dll`）会自动加载 `scripts\*.asi`。
+
+**安装**：把两个文件放进 `scripts\`：
+
+```
+scripts/directFont.asi
+scripts/directFont.ini
+```
+
+`directFont.ini` 的关键设置（四个字体槽 `FONT1`–`FONT4` 完全一致）：
+
+```ini
+[GENERAL]
+UseTranslator=NONE
+
+[FONT1]
+FontName=Arial Unicode MS
+Height=64
+Width=64
+ScaleFactor.x=0.5
+ScaleFactor.y=0.5
+Weight=400
+Italic=0
+CharSet=134
+OutputPrecision=0
+Quality=0
+PitchAndFamily=0
+UpcaseAlways=0
+ReplaceUnderscoreWithSpace=0
+```
+
+`FONT2`–`FONT4` 复制同样的内容，完整文件见附录 D。说明：
+
+- `Arial Unicode MS` 已由 CrossOver 从 macOS 注册进容器（见 3.3），不需要额外装字体。
+- `CharSet=134` 是 `GB2312_CHARSET`（代码页 936），与容器的 `zh-CN` 设置一致。
+- `Height` / `Width` 为 64、`ScaleFactor` 为 0.5，是实测与 1280×832 窗口匹配的组合；字太大或太小就调 `ScaleFactor`（例如 0.45 / 0.55），四个槽一起改。
+- `UseTranslator=NONE`：不启用内置的拉丁字母替换，避免把正常英文转成其他字符。
+- `directFont.asi` 依赖 `d3dx9_43.dll`；CrossOver 容器里已有（`system32` 和 `syswow64`），无需另装 DirectX。
+
+**验证**：进入「★Drift Star★自由城1」后，左上角规则和「欢迎：登录 / 找回密码 / …」对话框均显示中文；本次已实测通过。
+
+> 风险与兼容性：directFont 是为 GTA SA 1.0 US 编写的旧插件，会接管**所有** GTA 字体渲染（包括英文），因此英文观感会和原版不同；极少数情况下可能与其他 ASI 冲突。若出现崩溃或文字错位，直接删除这两个文件即可恢复，详见第 6 节。
+
+### 3.5 中文路径与启动项
 
 原游戏目录名含中文，因此：
 
@@ -158,7 +212,7 @@ fontsize=1
    - 或「圣安地列斯游戏本体+SAMP-R3带语音插件汉化版」
 2. 在 SA-MP 服务器浏览器中找到「★Drift Star★自由城1」。
 3. 选中服务器，点「连接」。
-4. 进入服务器后中文聊天正常。
+4. 进入服务器后中文聊天、公告牌和对话框均正常。
 
 服务器地址：`ds.zycdjz1.com:7777`
 收藏记录保存在 `SAMP/USERDATA.DAT`，未改动。
@@ -172,6 +226,8 @@ fontsize=1
 | 游戏根目录 `d3d9.dll`                                   | 800×600×32 模式代理，271,360 字节 | SHA-256 `fde5c00e2246f939ae542b5535cd39642dfaeda020a169bf11494b560fb134c2` |
 | `scripts/III.VC.SA.WindowedMode.asi`                    | 窗口化插件，3,232,600 字节        | SHA-256 `8b2485e89761044f56bbd4e2fa882ec9667939edf542fde682e016bd7e9373a9` |
 | `scripts/III.VC.SA.WindowedMode.cfg`                    | 窗口化设置                        | `WindowMode=1`、`Width=0`、`Height=0`                        |
+| `scripts/directFont.asi`                                | TextDraw / CFont 中文字体钩子（directFont v2.2），370,176 字节 | SHA-256 `168af6eda740f1c68437f9c61cf00c89279ea8ce19fff96a0c6888ce9e0bc2f3` |
+| `scripts/directFont.ini`                                | directFont 配置，四个字体槽均为 Arial Unicode MS | SHA-256 `b49a24ccc89b032954b42f99501b4bd9e959f5695c23cbaa424264e572032789` |
 | `~/Documents/GTA San Andreas User Files/SAMP/sa-mp.cfg` | 中文字体设置                      | 见 3.3                                                       |
 | `~/Library/.../Bottles/samp/user.reg`                   | `d3d9=native,builtin` 覆盖        | 见 3.1                                                       |
 | `C:\GTA`                                                | 指向中文游戏目录的链接            | —                                                            |
@@ -186,8 +242,9 @@ fontsize=1
 | `sampaux3.ttf`                            | `3adfe84498e8951e61ece57ad08de21b95d162697517291564ae6ef3a8790c1b` |
 | `gtaweap3.ttf`                            | `086dc4351bf1056d80a73168440ffe4261831bde992e5134902b9bae017dcbe9` |
 | `vorbisFile.dll`（整合包自带 ASI Loader） | `c33e1bafafd441b42eaa6d322393b9dd700f8a9c13fb2e7780daf49707a46353` |
+| `models/fonts.txd`（GTA 原版位图字体）   | `5ca77cddb15f96de29b3786cb5620492dbc310d29af2d1374e644d74f1a61cbf` |
 
-`samp.dll` 没有改名、没有打补丁；代理逻辑全部在独立的 `d3d9.dll` 里。
+`samp.dll` 没有改名、没有打补丁；代理逻辑全部在独立的 `d3d9.dll` 里。`fonts.txd` 也没有替换——directFont 只是绕过了它，原文件保持不变。
 
 > 最终版 `d3d9.dll` 已去掉调试日志输出，游戏目录不会再生成 `d3d9proxy.log`。
 
@@ -197,8 +254,9 @@ fontsize=1
 
 1. **撤销 800×600 修复**：删除游戏根目录的 `d3d9.dll`，并在 winecfg 的「函数库」中删除 `d3d9` 覆盖（或把 `user.reg` 里的 `"d3d9"="native,builtin"` 删除）。
 2. **撤销窗口化**：删除 `scripts/III.VC.SA.WindowedMode.asi` 和 `.cfg`。
-3. **撤销中文字体**：删除 `sa-mp.cfg` 中的 `fontface` / `fontweight` / `fontsize` 三行，或改回 `fontface="Arial"`。
-4. **撤销快捷方式**：把两个启动项的目标改回中文游戏目录下的 `samp.exe`（或直接删除 `C:\GTA` 链接后重新指定）。
+3. **撤销聊天字体**：删除 `sa-mp.cfg` 中的 `fontface` / `fontweight` / `fontsize` 三行，或改回 `fontface="Arial"`。
+4. **撤销 TextDraw 中文**：删除 `scripts/directFont.asi` 和 `scripts/directFont.ini`。
+5. **撤销快捷方式**：把两个启动项的目标改回中文游戏目录下的 `samp.exe`（或直接删除 `C:\GTA` 链接后重新指定）。
 
 游戏本体、存档、服务器收藏均不受上述操作影响。
 
@@ -212,9 +270,15 @@ fontsize=1
 
 **中文变成方块或问号**
 
-- 检查 `sa-mp.cfg` 的三行字体设置是否被客户端重写。
-- 确认 `system.reg` 中 `Arial Unicode MS` 仍指向 macOS 的 `Arial Unicode.ttf`。
+- 先分清位置：
+  - **聊天区**：检查 `sa-mp.cfg` 的三行字体设置是否被客户端重写；确认 `system.reg` 中 `Arial Unicode MS` 仍指向 macOS 的 `Arial Unicode.ttf`。
+  - **公告牌 / TextDraw / 对话框**：检查 `scripts/directFont.asi`、`directFont.ini` 是否存在，`CharSet` 是否为 `134`，以及容器里是否有 `d3dx9_43.dll`。
 - 不要把 `sampaux3.ttf` 换成中文字体，它不是聊天字体。
+
+**directFont 导致崩溃、文字错位或英文观感异常**
+
+- 先退出游戏，删除 `scripts/directFont.asi` 和 `directFont.ini`，再启动即可回到原版字体。
+- 文字大小不合适时只改 `directFont.ini` 的 `ScaleFactor`（四个字体槽一起改），不要动其它 hook 设置。
 
 **画面全屏、无法切窗口**
 
@@ -365,3 +429,72 @@ Direct3DCreate9Ex
 ```
 
 把生成的 `d3d9.dll` 放到游戏根目录，并确保 `d3d9=native,builtin` 覆盖存在即可。`-g` 只是保留调试信息，不影响运行；如不需要可去掉。
+
+## 附录 D：`directFont.ini`（完整）
+
+```ini
+; DirectFont by DK22Pac - 自由城 SA-MP 中文字体配置
+; 用 macOS 自带 Arial Unicode MS 渲染 GTA 的 CFont（聊天区不受影响）
+[GENERAL]
+UseTranslator=NONE
+
+[FONT1]
+FontName=Arial Unicode MS
+Height=64
+Width=64
+ScaleFactor.x=0.5
+ScaleFactor.y=0.5
+Weight=400
+Italic=0
+CharSet=134
+OutputPrecision=0
+Quality=0
+PitchAndFamily=0
+UpcaseAlways=0
+ReplaceUnderscoreWithSpace=0
+
+[FONT2]
+FontName=Arial Unicode MS
+Height=64
+Width=64
+ScaleFactor.x=0.5
+ScaleFactor.y=0.5
+Weight=400
+Italic=0
+CharSet=134
+OutputPrecision=0
+Quality=0
+PitchAndFamily=0
+UpcaseAlways=0
+ReplaceUnderscoreWithSpace=0
+
+[FONT3]
+FontName=Arial Unicode MS
+Height=64
+Width=64
+ScaleFactor.x=0.5
+ScaleFactor.y=0.5
+Weight=400
+Italic=0
+CharSet=134
+OutputPrecision=0
+Quality=0
+PitchAndFamily=0
+UpcaseAlways=0
+ReplaceUnderscoreWithSpace=0
+
+[FONT4]
+FontName=Arial Unicode MS
+Height=64
+Width=64
+ScaleFactor.x=0.5
+ScaleFactor.y=0.5
+Weight=400
+Italic=0
+CharSet=134
+OutputPrecision=0
+Quality=0
+PitchAndFamily=0
+UpcaseAlways=0
+ReplaceUnderscoreWithSpace=0
+```
